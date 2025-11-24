@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>2P Rhythm Game</title>
+<style>
+  body {
+    margin:0;
+    overflow:hidden;
+    background:#222;
+    position:relative;
+  }
+
+  #gameArea {
+    position:relative;
+    width:100vw;
+    height:100vh;
+    overflow:hidden;
+  }
+
+  /* レーン仕切り線 */
+  #laneLine {
+    position:absolute;
+    left:50%;
+    top:0;
+    width:4px;
+    height:100%;
+    background:white;
+    opacity:0.5;
+    transform:translateX(-50%);
+  }
+
+  /* 判定ライン */
+  #judgeLine {
+    position:absolute;
+    top:70%;
+    left:0;
+    width:100%;
+    height:4px;
+    background:yellow;
+  }
+
+  /* ノーツ */
+  .note {
+    position:absolute;
+    width:16%;
+    height:40px;
+    border-radius:8px;
+  }
+  .leftNote { background:skyblue; left:17%; }
+  .rightNote { background:pink; left:67%; }
+
+  /* タップボタン */
+  .hitBtn {
+    position:absolute;
+    width:20%;
+    height:10%;
+    border:none;
+    border-radius:20px;
+    color:white;
+    font-size:20px;
+  }
+  #leftBtn { background:blue; left:5%; bottom:10%; }
+  #rightBtn { background:deeppink; right:5%; bottom:10%; }
+
+  /* HP表示 */
+  #hp1, #hp2 {
+    position:absolute;
+    top:5%;
+    font-size:20px;
+    color:white;
+  }
+  #hp1 { left:10%; }
+  #hp2 { right:10%; }
+
+  /* 勝敗メッセージ */
+  #resultMessage {
+    position:absolute;
+    top:40%;
+    left:50%;
+    transform:translateX(-50%);
+    color:white;
+    font-size:40px;
+    display:none;
+  }
+
+  /* 再戦ボタン */
+  #retryBtn {
+    position:absolute;
+    top:60%;
+    left:50%;
+    transform:translateX(-50%);
+    padding:15px 30px;
+    border:none;
+    background:orange;
+    border-radius:20px;
+    font-size:25px;
+    display:none;
+  }
+</style>
+</head>
+
+<body>
+<div id="gameArea">
+
+  <div id="laneLine"></div>
+  <div id="judgeLine"></div>
+
+  <div id="hp1">P1 HP: 100</div>
+  <div id="hp2">P2 HP: 100</div>
+
+  <button id="leftBtn" class="hitBtn">LEFT</button>
+  <button id="rightBtn" class="hitBtn">RIGHT</button>
+
+  <div id="resultMessage"></div>
+  <button id="retryBtn">再戦</button>
+
+</div>
+
+<script>
+let hp1 = 100;
+let hp2 = 100;
+
+let spawnInterval;
+let dropInterval;
+
+/* HP更新 */
+function updateHP(){
+  document.getElementById("hp1").innerText = `P1 HP: ${hp1}`;
+  document.getElementById("hp2").innerText = `P2 HP: ${hp2}`;
+  checkGameOver();
+}
+
+/* ゲーム停止と勝敗処理 */
+function checkGameOver(){
+  if(hp1 <= 0){
+    endGame("🎉 Player2 WIN！");
+  }
+  if(hp2 <= 0){
+    endGame("🎉 Player1 WIN！");
+  }
+}
+
+/* 終了処理 */
+function endGame(message){
+  clearInterval(spawnInterval);
+  clearInterval(dropInterval);
+
+  document.getElementById("resultMessage").innerText = message;
+  document.getElementById("resultMessage").style.display = "block";
+  document.getElementById("retryBtn").style.display = "block";
+}
+
+/* 再戦処理 */
+document.getElementById("retryBtn").onclick = () => {
+  hp1 = 100;
+  hp2 = 100;
+  updateHP();
+
+  document.querySelectorAll(".note").forEach(n=>n.remove());
+
+  document.getElementById("resultMessage").style.display = "none";
+  document.getElementById("retryBtn").style.display = "none";
+
+  startGame();
+};
+
+/* ノーツ生成 */
+function spawnNote(){
+  const side = Math.random() < 0.5 ? "left" : "right";
+  const note = document.createElement("div");
+  note.classList.add("note");
+  note.dataset.side = side;
+  note.dataset.hit = "false";
+
+  if(side === "left") note.classList.add("leftNote");
+  else note.classList.add("rightNote");
+
+  note.style.top = "-50px";
+  document.getElementById("gameArea").appendChild(note);
+}
+
+/* ノーツ落下 */
+function dropNotes(){
+  const notes = document.querySelectorAll(".note");
+  notes.forEach(n=>{
+    let y = parseFloat(n.style.top);
+    n.style.top = (y + 2) + "px";
+
+    if(y > window.innerHeight){
+      n.remove();
+    }
+  });
+}
+
+/* タップ判定 */
+function hit(side){
+  const judgeY = document.getElementById("judgeLine").offsetTop;
+  const range = 40;
+
+  const notes = Array.from(document.querySelectorAll(".note"))
+    .filter(n => n.dataset.side === side && n.dataset.hit === "false");
+
+  if(notes.length === 0) return;
+
+  const note = notes[0];
+  const noteY = parseFloat(note.style.top);
+
+  if(Math.abs(noteY - judgeY) <= range){
+    if(side === "left") hp2 -= 5;
+    else hp1 -= 5;
+    updateHP();
+  }
+
+  note.dataset.hit = "true";
+  note.remove();
+}
+
+/* ボタン */
+document.getElementById("leftBtn").onclick = () => hit("left");
+document.getElementById("rightBtn").onclick = () => hit("right");
+
+/* ゲーム開始 */
+function startGame(){
+  spawnInterval = setInterval(spawnNote, 900);
+  dropInterval = setInterval(dropNotes, 16);
+}
+
+startGame();
+</script>
+</body>
+</html>
